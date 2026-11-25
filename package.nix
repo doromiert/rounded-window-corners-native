@@ -1,7 +1,7 @@
 {lib,stdenvNoCC,glib,gettext,nodejs,gjs,gtk4,libadwaita,makeWrapper,wrapGAppsHook4,gobject-introspection}:
 stdenvNoCC.mkDerivation {
   pname="gnome-shell-extension-rounded-window-corners-native";
-  version="51.1-gnome50.2";
+  version="51.1-gnome50.3";
   src=lib.cleanSource ./.;
   nativeBuildInputs=[glib gettext makeWrapper wrapGAppsHook4 gobject-introspection];
   buildInputs=[gtk4 libadwaita];

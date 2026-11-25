@@ -3,7 +3,7 @@ Upstream: https://github.com/ztrahmet/rounded-window-corners
 Baseline: f26280d33026ad1fe50000480b14e86239c47528, GPL-3.0-or-later.
 
 The GNOME50 port uses Shell.GLSLEffect's pipeline/uniform API for the ordinary
-effect. The sharp rendering implementation is unchanged. Metadata declares50,
+effect. The sharp renderer preserves HDR paint targets as described below. Metadata declares50,
 and the package enables sharp rendering by default. The libadwaita stylesheet
 probe uses a dependency-complete Nix wrapper instead of relying on PATH.
 
@@ -42,3 +42,25 @@ Save baseline-1.5.png without effects and deform-restored.png after the fixture.
 Run gjs -m tests/integration/compiz-pixels.js CAPTURE_DIRECTORY with GdkPixbuf
 available to assert visible deformations, an unclipped shifted edge, ordinary
 renderer alignment and unchanged settled interior pixels.
+
+HDR offscreen rendering (51.1-gnome50.3): keep the outer paint target's encoding
+while capturing mixed SDR/HDR child surfaces. Clutter LayerNode otherwise forces
+the parent actor's SDR state and tone maps HDR children before final composition.
+A RootNode retains the target, the shader declares its color-state capability
+(to avoid a second SDR transform), and HDR buffers use FP16. Cached buffers are
+discarded when the target changes, including captures and monitor changes.
+
+This requires ZenOS Mutter's paint-target-introspection.patch, which exposes the
+existing clutter_paint_context_get_target_color_state getter with borrowed
+ownership. Stock GNOME50 retains the previous rendering path until its typelib
+is updated; an already running Shell needs a new login to load the updated API.
+
+Native tests/integration/hdr-color.js exports run({actor,win,directory,write}).
+Use a mapped real window in a private GNOME50.4 session and a fresh capture
+directory; write(name,value) saves JSON there. The fixture adds native SDR gray
+chips and a PQ1000-nit chip, then captures without rounding, rounded, maximized
+and restored. Every state alternates PQ/SDR/PQ paint targets. It asserts all RGB
+samples agree within one code value, rejects blank captures and requires the
+HDR chip to exceed SDR white. The old renderer fails (highlight191→141); the
+new renderer preserves all samples, including native Gnosis page content.
+This tests pixel encoding, not physical monitor calibration or every GPU driver.
