@@ -64,3 +64,19 @@ samples agree within one code value, rejects blank captures and requires the
 HDR chip to exceed SDR white. The old renderer fails (highlight191→141); the
 new renderer preserves all samples, including native Gnosis page content.
 This tests pixel encoding, not physical monitor calibration or every GPU driver.
+
+HDR buffer reuse (51.1-gnome50.4): color-state changes now invalidate pixels,
+not the geometry/texture cache. A buffer is promoted to FP16 once when needed
+and retains that format for subsequent SDR paints. Resizes still reuse storage
+within the existing bounds. This prevents capture/display color-state changes
+from allocating a texture every frame and filling the kernel TTM page pool.
+
+Run tests/integration/hdr-buffer-memory.js in the same isolated Shell after the
+HDR color fixture; it exports run({actor,write}). Across 80 alternating SDR/PQ
+captures it counts actual framebuffer replacements, without retaining those
+objects. After warmup, at most two allocation adjustments are permitted. The
+50.3 negative control allocated 80 times (60 after warmup); 50.4 allocated three
+times total (one late size adjustment), with the HDR pixel assertions preserved.
+The diagnostic kernel allocation snapshot on the affected desktop recorded
+14,747,779,072 bytes in ttm_pool_alloc_page; unused pages were reclaimed without
+closing apps. Cache reclamation is diagnostic relief, not the rendering fix.
